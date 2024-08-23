@@ -1,5 +1,7 @@
 # Roadmap
 
+## Version 1.0.0
+
 - [ ] Core Functions
   - [ ] Loading images from directory
   - [ ] Merging input images in memory
