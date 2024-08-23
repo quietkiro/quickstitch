@@ -20,7 +20,7 @@ SmartStitch's "Smart Pixel Comparison" only checks one row of pixels at a time. 
 
 Here are some examples of such cases that I have actually come across, although I have recreated them to avoid copyright issues.
 
-![speech bubble edge case](./docs/assets/readme/speech_edge_case.jpg)
+![speech bubble edge case](./docs/assets/readme/speech_bubble_edge_case.jpg)
 
 ![unboxed text edge case](./docs/assets/readme/unboxed_text_edge_case.jpg)
 
