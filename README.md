@@ -47,3 +47,7 @@ Since Quickstitch is built with Rust and is available as both a library and a bi
 SmartStitch is by no means untolerably slow, but since processors have more than one core these days, I want Quickstitch to take advantage of multithreading (which SmartStitch couldn't easily add support for even if it wanted to due to Python's GIL, at least up until now) due to [rayon](https://github.com/rayon-rs/rayon) making it pretty simple, at least for a simple multithreading implementation. This by no means guarantees that Quickstitch will be faster than SmartStitch, but it's worth a shot.
 
 Additionally, since Rust is compiled, Quickstitch should also be able to reap the benefits of compile-time optimizations.
+
+## Acknowledgements 
+
+Special thanks to [Leafsky](https://www.instagram.com/_.melo.vee._/) for giving me permission to use her comic as a test sample!
