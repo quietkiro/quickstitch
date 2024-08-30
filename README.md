@@ -28,7 +28,7 @@ Here are some examples of such cases that I have actually come across, although 
 
 To avoid this, the split line finder for Quickstitch should check the results of consecutive scan lines to ensure the split line found is not in the middle of a text block. It's still not perfect, and which brings us to the next point:
 
-2. Restitching is a Pain
+### 2. Restitching is a Pain
 
 Due to the point mentioned above, I usually have to double-check the results of SmartStitch. The main issue with this is when I do manage to spot a problem, I need to restitch. However, I'm not exactly great with art programs (if you haven't already realized that from the images above), so my method is just to modify the "Rough Output Height" by small amounts to convince the program to make a split elsewhere. However, even that method has its limits. A while ago, I came across a chapter which contained loads of unboxed text. With each restitch I did, another block of unboxed text got split in the middle.
 
