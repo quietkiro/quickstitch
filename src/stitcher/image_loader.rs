@@ -5,7 +5,7 @@ use image::{
     image_dimensions, imageops::FilterType::Lanczos3, GenericImage, ImageReader, RgbImage,
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use std::{fs::read_dir, path::PathBuf};
+use std::{fs::read_dir, path::PathBuf, time::Instant};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -19,7 +19,7 @@ pub enum ImageLoaderError {
 /// Throws an error if:
 ///  - The directory is invalid or does not contain any images.
 ///  - The directory does not contain any jpg, jpeg, png, or webp images.
-fn find_images(directory_path: &str) -> anyhow::Result<Vec<PathBuf>> {
+pub fn find_images(directory_path: &str) -> anyhow::Result<Vec<PathBuf>> {
     let mut images: Vec<_> = read_dir(directory_path)?
         .into_iter()
         .map(|file| file.unwrap().path())
@@ -53,27 +53,38 @@ fn find_images(directory_path: &str) -> anyhow::Result<Vec<PathBuf>> {
 ///  - The directory does not contain any jpg, jpeg, png, or webp images.
 ///  - An image cannot be opened.
 pub fn load_images(directory_path: &str, width: Option<u32>) -> anyhow::Result<RgbImage> {
+    let now = Instant::now();
+    let dimensions = find_images(directory_path)?
+        .into_iter()
+        .map(|image| image_dimensions(image).map_err(|e| anyhow!(e)))
+        .collect::<anyhow::Result<Vec<(u32, u32)>>>()?;
     let width = match width {
         Some(v) => v,
         None => {
-            let dimensions = find_images(directory_path)?
-                .into_iter()
-                .map(|image| image_dimensions(image).map_err(|e| anyhow!(e)))
-                .collect::<anyhow::Result<Vec<(u32, u32)>>>()?;
+            // let dimensions = find_images(directory_path)?
+            //     .into_iter()
+            //     .map(|image| image_dimensions(image).map_err(|e| anyhow!(e)))
+            //     .collect::<anyhow::Result<Vec<(u32, u32)>>>()?;
             // find_images will already throw an error if the directory does not contain any images, so unwrap is safe here.
             dimensions.iter().map(|pair| pair.0).min().unwrap()
         }
     };
+    let height = dimensions.iter().map(|pair| pair.1).max().unwrap();
     let images: Vec<RgbImage> = find_images(directory_path)?
         .into_par_iter()
         .map(|image_path| {
-            Ok(ImageReader::open(image_path)?
+            let image = ImageReader::open(image_path)?
                 .decode()
-                .map_err(|e| anyhow!(e))?
-                .resize(width, u32::MAX, Lanczos3)
-                .into())
+                .map_err(|e| anyhow!(e))?;
+            if image.width() == width {
+                return Ok(image.into());
+            }
+            // let height = width as f32 * image.height() as f32 / image.width() as f32;
+            Ok(image.resize(width, height, Lanczos3).into())
         })
         .collect::<anyhow::Result<Vec<RgbImage>>>()?;
+    println!("Loading images took {:.2?}", now.elapsed());
+    let now = Instant::now();
     let mut combined_image = RgbImage::new(width, images.iter().map(|image| image.height()).sum());
     let mut height_cursor = 0;
     for i in images {
@@ -81,5 +92,6 @@ pub fn load_images(directory_path: &str, width: Option<u32>) -> anyhow::Result<R
         combined_image.copy_from(&i, 0, height_cursor)?;
         height_cursor += i.height();
     }
+    println!("Merging images took {:.2?}", now.elapsed());
     Ok(combined_image)
 }
