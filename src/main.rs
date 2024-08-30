@@ -1,6 +1,5 @@
-use quickstitch::add;
+use quickstitch::stitcher::image_loader;
 
 fn main() {
-    println!("hello!");
-    println!("result: {}", add(2, 5));
+    image_loader::load_images("./combined", Some(800)).unwrap();
 }

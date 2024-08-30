@@ -3,8 +3,8 @@
 ## Version 1.0.0
 
 - [ ] Core Functions
-  - [ ] Loading images from directory
-  - [ ] Merging input images in memory
+  - [x] Loading images from directory
+  - [x] Merging input images in memory
   - [ ] Split finder
   - [ ] Splitter/exporter
 - [ ] GUI
