@@ -14,7 +14,7 @@ Over the last ~2 years, SmartStitch has been super useful to me and many others.
 
 That said, there are a few reasons why I decided to create an alternative from scratch:
 
-1. Edge Cases
+### 1. Edge Cases
 
 SmartStitch's "Smart Pixel Comparison" only checks one row of pixels at a time. This means that SmartStitch may sometimes think it's okay to split pages at the gap between lines of text.
 
@@ -34,7 +34,7 @@ Due to the point mentioned above, I usually have to double-check the results of 
 
 Therefore, with this program, there should be a simple GUI for manually restitching (and while I'm at it, double checking).
 
-3. Dependencies
+### 3. Dependencies
 
 This isn't a problem for most users as SmartStitch is available in the form of a bundled executable, but since I want to build some additional programs/scripts around it, I have to use the SmartStitch Core files, which require `natsort`, `numpy`, and `pillow` to be installed through pip. Sure, it isn't a lot of work, but this means extra setup steps if I were to, say, run my program on a VPS.
 
@@ -42,7 +42,7 @@ Since Quickstitch is built with Rust and is available as both a library and a bi
 
 (**Edit:** I just found out about the `setup.py` file bundled with SmartStitch, so I guess this point isn't as strong anymore. Regardless, I still think `cargo build`/`cargo run` is more streamlined for getting things set up and running.)
 
-4. Performance
+### 4. Performance
 
 SmartStitch is by no means untolerably slow, but since processors have more than one core these days, I want Quickstitch to take advantage of multithreading (which SmartStitch couldn't easily add support for even if it wanted to due to Python's GIL, at least up until now) due to [rayon](https://github.com/rayon-rs/rayon) making it pretty simple, at least for a simple multithreading implementation. This by no means guarantees that Quickstitch will be faster than SmartStitch, but it's worth a shot.
 
