@@ -20,7 +20,7 @@
       - Same as smart splitting with sensitivity set to 0%.
     - [ ] Smart splitting (Use adjacent pixel comparisons + multiline checks to determine where to split)
       - [ ] Scan line step size (in pixels)
-        - [ ] Have checkbox to automatically calculate thi based on a ratio & set page width
+        - [ ] Have checkbox to automatically calculate the based on a ratio & set page width
   - [ ] Double-check/Restitch Page
     - [ ] Show split locations
     - [ ] Modify split locations by scrolling
