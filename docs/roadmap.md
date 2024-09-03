@@ -6,7 +6,7 @@
   - [x] Loading images from directory
   - [x] Merging input images in memory
   - [x] Split finder
-  - [ ] Splitter/exporter
+  - [x] Splitter/exporter
 - [ ] GUI
   - [ ] Configuration Page
     - [ ] Input/Output filepath configuration
