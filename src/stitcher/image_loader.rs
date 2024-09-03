@@ -53,7 +53,6 @@ pub fn find_images(directory_path: &str) -> anyhow::Result<Vec<PathBuf>> {
 ///  - The directory does not contain any jpg, jpeg, png, or webp images.
 ///  - An image cannot be opened.
 pub fn load_images(directory_path: &str, width: Option<u32>) -> anyhow::Result<RgbImage> {
-    let now = Instant::now();
     let dimensions = find_images(directory_path)?
         .into_iter()
         .map(|image| image_dimensions(image).map_err(|e| anyhow!(e)))
@@ -83,8 +82,6 @@ pub fn load_images(directory_path: &str, width: Option<u32>) -> anyhow::Result<R
             Ok(image.resize(width, height, Lanczos3).into())
         })
         .collect::<anyhow::Result<Vec<RgbImage>>>()?;
-    println!("Loading images took {:.2?}", now.elapsed());
-    let now = Instant::now();
     let mut combined_image = RgbImage::new(width, images.iter().map(|image| image.height()).sum());
     let mut height_cursor = 0;
     for i in images {
@@ -92,6 +89,5 @@ pub fn load_images(directory_path: &str, width: Option<u32>) -> anyhow::Result<R
         combined_image.copy_from(&i, 0, height_cursor)?;
         height_cursor += i.height();
     }
-    println!("Merging images took {:.2?}", now.elapsed());
     Ok(combined_image)
 }
