@@ -14,6 +14,7 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIter
 ///
 /// Input parameters:
 ///  - `image` - A reference to the combined image.
+///  - `target_height` - How many pixels tall each page should be at most.
 ///  - `scan_interval` - The interval at which rows of pixels will be scanned.
 ///  - `sensitivity` - A value between 0 and 255, determining the threshold at which a row can be marked as a splitpoint.
 ///     - 0 would be no sensitivity, i.e. it doesn't matter what the pixels in the row are, it will be set as a splitpoint.
@@ -24,6 +25,7 @@ pub fn find_splitpoints(
     scan_interval: usize,
     sensitivity: u8,
 ) -> Vec<usize> {
+    let target_height = target_height + 1;
     let limit = u8::MAX - sensitivity;
     let mut splitpoints = vec![0];
     let mut cursor = target_height;
@@ -87,6 +89,7 @@ pub fn find_splitpoints(
 ///
 /// Input parameters:
 ///  - `image` - A mutable reference to the combined image.
+///  - `target_height` - How many pixels tall each page should be at most.
 ///  - `scan_interval` - The interval at which rows of pixels will be scanned.
 ///  - `sensitivity` - A value between 0 and 255, determining the threshold at which a row can be marked as a splitpoint.
 ///     - 0 would be no sensitivity, i.e. it doesn't matter what the pixels in the row are, it will be set as a splitpoint.
@@ -97,6 +100,7 @@ pub fn find_splitpoints_debug(
     scan_interval: usize,
     sensitivity: u8,
 ) -> Vec<usize> {
+    let target_height = target_height + 1;
     let limit = u8::MAX - sensitivity;
     let mut splitpoints = vec![0];
     let mut cursor = target_height;
@@ -179,7 +183,7 @@ pub fn split_image(
     output_directory: PathBuf,
     quality: u8,
 ) {
-    create_dir_all(output_directory);
+    create_dir_all(output_directory.clone()).unwrap();
     let max_digits = get_num_digits(splitpoints.len());
     splitpoints
         .windows(2)
