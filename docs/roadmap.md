@@ -5,7 +5,7 @@
 - [ ] Core Functions
   - [x] Loading images from directory
   - [x] Merging input images in memory
-  - [ ] Split finder
+  - [x] Split finder
   - [ ] Splitter/exporter
 - [ ] GUI
   - [ ] Configuration Page
