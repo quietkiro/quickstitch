@@ -63,14 +63,26 @@ pub fn find_splitpoints(
             splitpoints.push(min_splitpoint.unwrap().0)
         }
         cursor += target_height;
-        // TODO: Edge case: image is less than 3 pixels tall.
         if cursor > image.height() as usize {
             break;
         }
     }
+    splitpoints.push(image.height() as usize);
     splitpoints
 }
 
+/// Does exactly the same thing as the `find_splitpoints` method, but each scan line in the image is visually
+/// marked red (if max pixel diff exceeds threshold) or sky blue (if max pixel diff is below threshold)
+/// to indicate the max pixel diff.
+///
+/// As a copy of the image must be created, this method may be slower than `find_splitpoints`.
+///
+/// Input parameters:
+///  - `image` - A mutable reference to the combined image.
+///  - `scan_interval` - The interval at which rows of pixels will be scanned.
+///  - `sensitivity` - A value between 0 and 255, determining the threshold at which a row can be marked as a splitpoint.
+///     - 0 would be no sensitivity, i.e. it doesn't matter what the pixels in the row are, it will be set as a splitpoint.
+///     - 255 would be full sensitivity, i.e. all pixels in the row must be exactly the same color for it to be set as a splitpoint.
 pub fn find_splitpoints_debug(
     image: &mut RgbImage,
     target_height: usize,
@@ -80,8 +92,9 @@ pub fn find_splitpoints_debug(
     let limit = u8::MAX - sensitivity;
     let mut splitpoints = vec![];
     let mut cursor = target_height;
+    let ref_image = image.clone();
     loop {
-        let row_max_pixel_diffs = image
+        let row_max_pixel_diffs = ref_image
             .rows()
             .map(|row| {
                 row.into_iter()
@@ -115,11 +128,10 @@ pub fn find_splitpoints_debug(
             }
             // Otherwise, keep track of the minimum maximum of the three rows' max pixel diff.
             let curr_max = a.1.max(b.1.max(c.1));
-            // TODO: Figure out how to implement red marking for failed splits
-            // let to_mark = image.width() * (curr_max as f32 / u8::MAX as f32) as u32;
-            // for pixel in 0..to_mark {
-            //     image.put_pixel(pixel, a.0 as u32, Rgb([255, 0, 0]));
-            // }
+            let to_mark = image.width() * (curr_max as f32 / u8::MAX as f32) as u32;
+            for pixel in 0..to_mark {
+                image.put_pixel(pixel, a.0 as u32, Rgb([255, 0, 0]));
+            }
 
             match min_splitpoint {
                 Some(prev) => {
@@ -134,10 +146,10 @@ pub fn find_splitpoints_debug(
             splitpoints.push(min_splitpoint.unwrap().0)
         }
         cursor += target_height;
-        // TODO: Edge case: image is less than 3 pixels tall.
         if cursor > image.height() as usize {
             break;
         }
     }
+    splitpoints.push(ref_image.height() as usize);
     splitpoints
 }
