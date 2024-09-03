@@ -2,7 +2,7 @@
 
 ## Version 1.0.0
 
-- [ ] Core Functions
+- [x] Core Functions
   - [x] Loading images from directory
   - [x] Merging input images in memory
   - [x] Split finder
@@ -32,4 +32,4 @@
   - [ ] Batch mode
   - [ ] User guide
   - [ ] Configuration profiles
-  - [ ] Debug mode (to analyze )
+  - [x] Debug mode (to analyze the scan lines and their max pixel diff values)
