@@ -68,7 +68,7 @@ Parameters:
 Average of 10 runs, benchmarked using [hyperfine](https://github.com/sharkdp/hyperfine).
 
 | Program | Mean [s] | Min [s] | Max [s] |
-|:---|---:|---:|---:|---:|
+|:---|---:|---:|---:|
 | Quickstitch | 5.362 ± 0.072 | 5.254 | 5.482 |
 | SmartStitch | 7.140 ± 0.070 | 7.037 | 7.291 |
 
