@@ -13,7 +13,7 @@ fn main() {
     let image = image_loader::load_images("./testing/sample", Some(800)).unwrap();
     println!("Images loaded in {:.2?}", now.elapsed());
     let now = Instant::now();
-    let splitpoints = splitter::find_splitpoints(&image, 5000, 5, 240);
+    let splitpoints = splitter::find_splitpoints(&image, 5000, 5, 242);
     println!("Found splitpoints in {:.2?}", now.elapsed());
     let now = Instant::now();
     split_image(&image, &splitpoints, PathBuf::from("./testing/output"), 100);

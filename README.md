@@ -48,6 +48,31 @@ SmartStitch is by no means untolerably slow, but since processors have more than
 
 Additionally, since Rust is compiled, Quickstitch should also be able to reap the benefits of compile-time optimizations.
 
+#### Latest Benchmarking Results
+
+Last updated: 3rd of September, 2024
+
+Currently, the splitpoint finder algorithm is still singlethreaded, so there is room for improvement. That said, this is how Quickstitch measures up against SmartStitch.
+
+Relevant hardware specifications:
+- CPU: Ryzen 5 1500x
+- RAM: 32GB DDR4
+- SSD: 500GB NVMe (PCIe 3.0)
+
+Parameters:
+- Target height (`split_height` for SmartStitch): 5000 pixels
+- Output file type: `.jpeg/.jpg`
+- Sensitivity: 95% (242 for Quickstitch)
+- Enforced width: 800 pixels
+
+Average of 10 runs, benchmarked using [hyperfine](https://github.com/sharkdp/hyperfine).
+| Program | Mean [s] | Min [s] | Max [s] |
+|:---|---:|---:|---:|---:|
+| Quickstitch | 5.362 ± 0.072 | 5.254 | 5.482 |
+| SmartStitch | 7.140 ± 0.070 | 7.037 | 7.291 |
+
+Speedup: ~1.33x
+
 ## Acknowledgements 
 
 Special thanks to [Leafsky](https://www.instagram.com/_.melo.vee._/) for giving me permission to use her comic as a test sample!
