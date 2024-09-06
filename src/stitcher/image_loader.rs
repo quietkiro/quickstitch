@@ -1,17 +1,48 @@
 //! This module is for all methods involved in getting selected images loaded into memory.
 
-use anyhow::anyhow;
 use image::{
-    image_dimensions, imageops::FilterType::Lanczos3, GenericImage, ImageReader, RgbImage,
+    error::ImageError, image_dimensions, imageops::FilterType::Lanczos3, GenericImage, ImageReader,
+    RgbImage,
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use std::{fs::read_dir, path::PathBuf, time::Instant};
+use std::{
+    fs::read_dir,
+    path::{Path, PathBuf},
+    time::Instant,
+};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+/// Errors related to loading images.
 pub enum ImageLoaderError {
+    #[error("Expected a directory at \"{0}\"")]
+    ExpectedDirectory(PathBuf),
+    #[error("Could not find a valid path at \"{0}\"")]
+    NotFound(PathBuf),
+    #[error("Permission denied while attempting to access \"{0}\"")]
+    PermissionDenied(PathBuf),
     #[error("No images were found in the selected directory")]
     NoImagesInDirectory,
+    // TODO: convert upstream errors to more specific errors
+    #[error("{0}")]
+    ImageError(ImageError),
+}
+
+impl From<ImageError> for ImageLoaderError {
+    fn from(value: ImageError) -> Self {
+        Self::ImageError(value)
+    }
+}
+
+impl ImageLoaderError {
+    fn from_io_error(err: std::io::Error, path: PathBuf) -> ImageLoaderError {
+        use std::io::ErrorKind as Kind;
+        match err.kind() {
+            Kind::NotFound => ImageLoaderError::NotFound(path),
+            Kind::PermissionDenied => ImageLoaderError::PermissionDenied(path),
+            _ => unimplemented!(),
+        }
+    }
 }
 
 /// Finds all `.jpg`, `.jpeg`, `.png` and `.webp` images within a directory.
@@ -19,8 +50,16 @@ pub enum ImageLoaderError {
 /// Throws an error if:
 ///  - The directory is invalid or does not contain any images.
 ///  - The directory does not contain any jpg, jpeg, png, or webp images.
-pub fn find_images(directory_path: &str) -> anyhow::Result<Vec<PathBuf>> {
-    let mut images: Vec<_> = read_dir(directory_path)?
+pub fn find_images(directory_path: impl AsRef<Path>) -> Result<Vec<PathBuf>, ImageLoaderError> {
+    // create pathbuf, check if path is a directory
+    let path = PathBuf::from(directory_path.as_ref());
+    if !path.is_dir() {
+        return Err(ImageLoaderError::ExpectedDirectory(path));
+    }
+
+    // get images
+    let mut images: Vec<_> = read_dir(directory_path)
+        .map_err(|e| ImageLoaderError::from_io_error(e, path))?
         .into_iter()
         .map(|file| file.unwrap().path())
         .filter(|path| match path.extension() {
@@ -31,15 +70,16 @@ pub fn find_images(directory_path: &str) -> anyhow::Result<Vec<PathBuf>> {
             _ => false,
         })
         .collect();
+
+    // if no images were found
     if images.is_empty() {
         return Err(ImageLoaderError::NoImagesInDirectory.into());
     }
-    images.sort_by(|a, b| {
-        natord::compare(
-            a.file_name().unwrap().to_str().unwrap(),
-            b.file_name().unwrap().to_str().unwrap(),
-        )
-    });
+
+    // sort images by natural order
+    images.sort_by(|a, b| natord::compare(&a.display().to_string(), &b.display().to_string()));
+
+    // return images
     Ok(images)
 }
 
@@ -52,11 +92,11 @@ pub fn find_images(directory_path: &str) -> anyhow::Result<Vec<PathBuf>> {
 ///  - The directory is invalid or does not contain any images.
 ///  - The directory does not contain any jpg, jpeg, png, or webp images.
 ///  - An image cannot be opened.
-pub fn load_images(directory_path: &str, width: Option<u32>) -> anyhow::Result<RgbImage> {
+pub fn load_images(directory_path: &str, width: Option<u32>) -> Result<RgbImage, ImageLoaderError> {
     let dimensions = find_images(directory_path)?
         .into_iter()
-        .map(|image| image_dimensions(image).map_err(|e| anyhow!(e)))
-        .collect::<anyhow::Result<Vec<(u32, u32)>>>()?;
+        .map(|image| image_dimensions(image).map_err(|e| ImageLoaderError::from(e)))
+        .collect::<Result<Vec<(u32, u32)>, ImageLoaderError>>()?;
     let width = match width {
         Some(v) => v,
         None => {
@@ -72,16 +112,17 @@ pub fn load_images(directory_path: &str, width: Option<u32>) -> anyhow::Result<R
     let images: Vec<RgbImage> = find_images(directory_path)?
         .into_par_iter()
         .map(|image_path| {
-            let image = ImageReader::open(image_path)?
+            let image = ImageReader::open(image_path.clone())
+                .map_err(|e| ImageLoaderError::from_io_error(e, image_path))?
                 .decode()
-                .map_err(|e| anyhow!(e))?;
+                .map_err(|e| ImageLoaderError::from(e))?;
             if image.width() == width {
                 return Ok(image.into());
             }
             // let height = width as f32 * image.height() as f32 / image.width() as f32;
             Ok(image.resize(width, height, Lanczos3).into())
         })
-        .collect::<anyhow::Result<Vec<RgbImage>>>()?;
+        .collect::<Result<Vec<RgbImage>, ImageLoaderError>>()?;
     let mut combined_image = RgbImage::new(width, images.iter().map(|image| image.height()).sum());
     let mut height_cursor = 0;
     for i in images {
