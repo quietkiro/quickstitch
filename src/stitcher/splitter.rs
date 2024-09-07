@@ -168,6 +168,8 @@ pub fn find_splitpoints_debug(
 
 /// A helper function to calculate the number of digits a `usize` number has
 fn get_num_digits(num: usize) -> usize {
+    // this is safe because the number of digits of a `usize` will always be
+    // within the range of a `u32` anyway
     num.checked_ilog10().unwrap_or(0) as usize + 1
 }
 
