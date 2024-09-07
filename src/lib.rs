@@ -4,3 +4,5 @@
 
 pub mod gui;
 pub mod stitcher;
+
+pub use stitcher::Stitcher;
