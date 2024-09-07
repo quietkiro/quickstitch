@@ -10,7 +10,11 @@ fn main() -> anyhow::Result<()> {
     // let mut image = image_loader::load_images("./testing/sample", None).unwrap();
     // let splitpoints = splitter::find_splitpoints_debug(&mut image, 5000, 5, 240);
     let now = Instant::now();
-    let image = image_loader::load_images(image_loader::find_images("./testing/sample")?.as_ref(), Some(800)).unwrap();
+    let image = image_loader::load_images(
+        image_loader::find_images("./testing/sample")?.as_ref(),
+        Some(800),
+    )
+    .unwrap();
     println!("Images loaded in {:.2?}", now.elapsed());
     let now = Instant::now();
     let splitpoints = splitter::find_splitpoints(&image, 5000, 5, 242);

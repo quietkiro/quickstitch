@@ -6,8 +6,8 @@ use image::{
 };
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::{
-    io,
     fs::read_dir,
+    io,
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -17,16 +17,16 @@ use thiserror::Error;
 /// Errors related to loading images.
 pub enum ImageLoaderError {
     // IO Errors
-    #[error("Could not find a valid path at \"{0}\"")]
-    NotFound(PathBuf),
-    #[error("Permission denied while attempting to access \"{0}\"")]
-    PermissionDenied(PathBuf),
+    #[error("Could not find the provided file or directory")]
+    NotFound,
+    #[error("Insufficient permissions to access the provided file or directory")]
+    PermissionDenied,
 
     // Logical Errors
     #[error("No images were found in the selected directory")]
     NoImagesInDirectory,
-    #[error("Expected a directory at \"{0}\"")]
-    ExpectedDirectory(PathBuf),
+    #[error("Expected a directory")]
+    ExpectedDirectory,
 
     // upstream errors
     #[error("{0}")]
@@ -41,15 +41,15 @@ impl From<ImageError> for ImageLoaderError {
     }
 }
 
-impl ImageLoaderError {
-    // Convert a [io::Error] into a [ImageLoaderError].
-    fn from_io_error(err: std::io::Error, path: PathBuf) -> ImageLoaderError {
-        use std::io::ErrorKind as Kind;
-        match err.kind() {
-            Kind::NotFound => ImageLoaderError::NotFound(path),
-            Kind::PermissionDenied => ImageLoaderError::PermissionDenied(path),
+impl From<io::Error> for ImageLoaderError {
+    fn from(value: io::Error) -> Self {
+        use io::ErrorKind as Kind;
+
+        match value.kind() {
+            Kind::NotFound => ImageLoaderError::NotFound,
+            Kind::PermissionDenied => ImageLoaderError::PermissionDenied,
             // add more cases as required
-            _ => ImageLoaderError::IoError(err),
+            _ => ImageLoaderError::IoError(value),
         }
     }
 }
@@ -61,14 +61,13 @@ impl ImageLoaderError {
 ///  - The directory does not contain any jpg, jpeg, png, or webp images.
 pub fn find_images(directory_path: impl AsRef<Path>) -> Result<Vec<PathBuf>, ImageLoaderError> {
     // create pathbuf, check if path is a directory
-    let path = PathBuf::from(directory_path.as_ref());
+    let path = directory_path.as_ref();
     if !path.is_dir() {
-        return Err(ImageLoaderError::ExpectedDirectory(path));
+        return Err(ImageLoaderError::ExpectedDirectory);
     }
 
     // get images
-    let mut images: Vec<_> = read_dir(directory_path)
-        .map_err(|e| ImageLoaderError::from_io_error(e, path))?
+    let mut images: Vec<_> = read_dir(directory_path)?
         .into_iter()
         .map(|file| file.unwrap().path())
         .filter(|path| match path.extension() {
@@ -82,7 +81,7 @@ pub fn find_images(directory_path: impl AsRef<Path>) -> Result<Vec<PathBuf>, Ima
 
     // if no images were found
     if images.is_empty() {
-        return Err(ImageLoaderError::NoImagesInDirectory.into());
+        return Err(ImageLoaderError::NoImagesInDirectory);
     }
 
     // sort images by natural order
@@ -101,7 +100,10 @@ pub fn find_images(directory_path: impl AsRef<Path>) -> Result<Vec<PathBuf>, Ima
 ///  - The directory is invalid or does not contain any images.
 ///  - The directory does not contain any jpg, jpeg, png, or webp images.
 ///  - An image cannot be opened.
-pub fn load_images(paths: &[impl AsRef<Path>], width: Option<u32>) -> Result<RgbImage, ImageLoaderError> {
+pub fn load_images(
+    paths: &[impl AsRef<Path>],
+    width: Option<u32>,
+) -> Result<RgbImage, ImageLoaderError> {
     // get a vec of path refs from the generic parameter
     let paths = paths.iter().map(|p| p.as_ref()).collect::<Vec<&Path>>();
 
@@ -130,15 +132,14 @@ pub fn load_images(paths: &[impl AsRef<Path>], width: Option<u32>) -> Result<Rgb
     let images: Vec<RgbImage> = paths
         .par_iter()
         .map(|&image_path| {
-            let image = ImageReader::open(image_path)
-                .map_err(|e| ImageLoaderError::from_io_error(e, image_path.to_path_buf()))?
+            let image = ImageReader::open(image_path)?
                 .decode()
                 .map_err(|e| ImageLoaderError::from(e))?;
 
             if image.width() == width {
                 // noop if widths match
                 Ok(image.into())
-            } else { 
+            } else {
                 // resize image otherwise
                 // let height = width as f32 * image.height() as f32 / image.width() as f32;
                 Ok(image.resize(width, height, Lanczos3).into())
@@ -152,7 +153,9 @@ pub fn load_images(paths: &[impl AsRef<Path>], width: Option<u32>) -> Result<Rgb
 
     for i in images {
         // This should never throw an error because the combined image height is set to the sum of all image heights.
-        combined_image.copy_from(&i, 0, height_cursor).expect("all according to keikaku");
+        combined_image
+            .copy_from(&i, 0, height_cursor)
+            .expect("all according to keikaku");
         height_cursor += i.height();
     }
 
