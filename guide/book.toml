@@ -1,0 +1,6 @@
+[book]
+authors = ["quietkiro", "Slope"]
+language = "en"
+multilingual = false
+src = "src"
+title = "QuickStitch User Guide"
