@@ -5,21 +5,28 @@ edition = "2021"
 
 [features]
 cli = ["dep:clap"]
+gui = ["dep:iced"]
 
 [dependencies]
 anyhow = "1.0.86"
-image = "0.25.2"
+image = { version = "0.25.2", features = ["rayon", "jpeg", "png", "webp"] }
 natord = "1.0.9"
 rayon = "1.10.0"
 thiserror = "1.0.63"
-iced = { git = "https://github.com/iced-rs/iced", rev = "043f0302142e46bf1d7ba2015f83261813280fec" }
 itertools = "0.13.0"
+
+# gui deps
+iced = { git = "https://github.com/iced-rs/iced", rev = "043f0302142e46bf1d7ba2015f83261813280fec", optional = true }
 
 # cli
 clap = { version = "4.5", features = ["derive"], optional = true }
 
 [dev-dependencies]
 criterion = "0.5.1"
+
+[[bin]]
+name = "quickstitch"
+required-features = ["gui"]
 
 [[bin]]
 name = "qstitch"
