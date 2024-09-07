@@ -168,13 +168,9 @@ pub fn find_splitpoints_debug(
 
 /// A helper function to calculate the number of digits a `usize` number has
 fn get_num_digits(num: usize) -> usize {
-    let mut digits = 0;
-    let mut remaining = num;
-    while remaining > 0 {
-        digits += 1;
-        remaining /= 10;
-    }
-    digits
+    // this is safe because the number of digits of a `usize` will always be
+    // within the range of a `u32` anyway
+    num.checked_ilog10().unwrap_or(0) as usize + 1
 }
 
 pub fn split_image(
