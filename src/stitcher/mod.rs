@@ -13,24 +13,20 @@ mod private {
 pub trait StitcherState: private::Seal {}
 
 /// A marker type declaring a new [Stitcher] object.
-/// 
-/// [stitch](Stitcher::stitch) cannot be called on a [Blank] [Stitcher] object.
 pub struct Blank;
 
 /// A marker type declaring a [Stitcher] object containing images.
-/// 
-/// [stitch](Stitcher::stitch) can be called on a [Loaded] [Stitcher] object.
 pub struct Loaded;
 
-/// A marker type declaring a [Stitcher] object containing stitched images.
-pub struct Stitched;
+/// A marker type declaring a [Stitcher] object containing split images.
+pub struct Split;
 
 impl private::Seal for Blank {}
 impl StitcherState for Blank {}
 impl private::Seal for Loaded {}
 impl StitcherState for Loaded {}
-impl private::Seal for Stitched {}
-impl StitcherState for Stitched {}
+impl private::Seal for Split {}
+impl StitcherState for Split {}
 
 /// A simple way to load, stitch, and output images.
 /// 
@@ -48,6 +44,38 @@ impl StitcherState for Stitched {}
 ///     Ok(())
 /// }
 /// ```
+/// 
+/// # States
+/// 
+/// [Stitcher] is implemented such that you can only call certain methods on a
+/// [Stitcher] object of a given state. For instance, you cannot call
+/// [split](Stitcher::split) before calling [load](Stitcher::load).
+/// 
+/// ```compile_fail
+/// # use quickstitch::Stitcher;
+/// Stitcher::new().stitch(); // this will fail to compile
+/// ```
+/// 
+/// There are three states: [Blank], [Loaded], and [Split].
+/// 
+/// ## [Blank]
+/// 
+/// The [Blank] state represents a new [Stitcher] object, with no images loaded.
+/// 
+/// You can call [load](Stitcher::load) to load images into the [Stitcher]
+/// object, giving you a [Loaded] [Stitcher] object.
+/// 
+/// ## [Loaded]
+/// 
+/// The [Loaded] state represents a [Stitcher] object with images loaded. This
+/// means that you can call [split](Stitcher::split), but can no longer call
+/// [load](Stitcher::load) and cannot call [write](Stitcher::write).
+/// 
+/// ## [Split]
+/// 
+/// The [Split] state represents a [Stitcher] object that has split its images.
+/// You can now call [write](Stitcher::write), but can no longer call any of the
+/// other families of methods.
 pub struct Stitcher<S: StitcherState> {
     _marker: PhantomData<S>,
 }
@@ -79,14 +107,14 @@ impl Stitcher<Blank> {
 }
 
 impl Stitcher<Loaded> {
-    pub fn stitch(self) -> Stitcher<Stitched> {
+    pub fn split(self) -> Stitcher<Split> {
         Stitcher {
             _marker: PhantomData,
         }
     }
 }
 
-impl Stitcher<Stitched> {
+impl Stitcher<Split> {
     pub fn write(self) -> Result<(), io::Error> {
         Ok(())
     }
