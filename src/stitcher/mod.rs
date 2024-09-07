@@ -2,31 +2,34 @@ pub mod image_loader;
 pub mod splitter;
 
 use std::{io, marker::PhantomData, path::Path};
-
 use image_loader::ImageLoaderError;
+use marker::*;
 
-mod private {
-    pub trait Seal {}
+/// The marker types for [Stitcher].
+pub mod marker {
+    mod private {
+        pub trait Seal {}
+    }
+
+    /// Marker trait for possible states of a [Stitcher] type.
+    pub trait StitcherState: private::Seal {}
+
+    /// A marker type declaring a new [Stitcher] object.
+    pub struct Blank;
+
+    /// A marker type declaring a [Stitcher] object containing images.
+    pub struct Loaded;
+
+    /// A marker type declaring a [Stitcher] object containing split images.
+    pub struct Split;
+
+    impl private::Seal for Blank {}
+    impl StitcherState for Blank {}
+    impl private::Seal for Loaded {}
+    impl StitcherState for Loaded {}
+    impl private::Seal for Split {}
+    impl StitcherState for Split {}
 }
-
-/// Marker trait for possible states of a [Stitcher] type.
-pub trait StitcherState: private::Seal {}
-
-/// A marker type declaring a new [Stitcher] object.
-pub struct Blank;
-
-/// A marker type declaring a [Stitcher] object containing images.
-pub struct Loaded;
-
-/// A marker type declaring a [Stitcher] object containing split images.
-pub struct Split;
-
-impl private::Seal for Blank {}
-impl StitcherState for Blank {}
-impl private::Seal for Loaded {}
-impl StitcherState for Loaded {}
-impl private::Seal for Split {}
-impl StitcherState for Split {}
 
 /// A simple way to load, stitch, and output images.
 /// 
@@ -38,7 +41,7 @@ impl StitcherState for Split {}
 /// fn main() -> Result<(), ImageLoaderError> {
 ///     Stitcher::new()
 ///         .load(&["chapter-1.1", "chapter-1.2", "chapter-1.3"])?
-///         .stitch()
+///         .split()
 ///         .write();
 /// 
 ///     Ok(())
