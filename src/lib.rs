@@ -2,5 +2,4 @@
 //!
 //! todo: add example for quickly getting started
 
-pub mod gui;
 pub mod stitcher;
