@@ -20,6 +20,9 @@ iced = { git = "https://github.com/iced-rs/iced", rev = "043f0302142e46bf1d7ba20
 [dev-dependencies]
 criterion = "0.5.1"
 
+# [[bin]]
+# name = "quickstitch-gui"
+# required-features = ["gui"]
+
 [[bin]]
-name = "quickstitch"
-required-features = ["gui"]
+name = "test"
