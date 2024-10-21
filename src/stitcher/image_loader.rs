@@ -4,12 +4,11 @@ use image::{
     error::ImageError, image_dimensions, imageops::FilterType::Lanczos3, GenericImage, ImageReader,
     RgbImage,
 };
-use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{
     fs::read_dir,
     io,
     path::{Path, PathBuf},
-    time::Instant,
 };
 use thiserror::Error;
 
@@ -96,6 +95,14 @@ pub fn find_images(directory_path: impl AsRef<Path>) -> Result<Vec<PathBuf>, Ima
 /// If the `width` parameter is set to `None`, the width of the image with the smallest width will be used.
 /// Otherwise, the given width will be used.
 ///
+/// Parameters:
+///  - paths: A slice containing paths to each individual input image.
+///  - width: The width that the final stitched images will have.
+///  - ignore_unloadable: Sometimes, there is an issue where the same page exists twice,
+///                       except one of them is completely empty. For cases like this,
+///                       this setting exists to allow you to only load images that are
+///                       able to be loaded.
+///
 /// Throws an error if:
 ///  - The directory is invalid or does not contain any images.
 ///  - The directory does not contain any jpg, jpeg, png, or webp images.
@@ -103,23 +110,24 @@ pub fn find_images(directory_path: impl AsRef<Path>) -> Result<Vec<PathBuf>, Ima
 pub fn load_images(
     paths: &[impl AsRef<Path>],
     width: Option<u32>,
+    ignore_unloadable: bool,
 ) -> Result<RgbImage, ImageLoaderError> {
     // get a vec of path refs from the generic parameter
     let paths = paths.iter().map(|p| p.as_ref()).collect::<Vec<&Path>>();
 
     let dimensions = paths
         .iter()
-        .map(|&image| image_dimensions(image).map_err(|e| ImageLoaderError::from(e)))
-        .collect::<Result<Vec<(u32, u32)>, ImageLoaderError>>()?;
+        .map(|&image| image_dimensions(image).map_err(|e| ImageLoaderError::from(e)));
+    let dimensions: Vec<_> = if ignore_unloadable {
+        dimensions.filter_map(|res| res.ok()).collect()
+    } else {
+        dimensions.collect::<Result<Vec<(u32, u32)>, ImageLoaderError>>()?
+    };
 
     // the width to resize images to
     let width = match width {
         Some(v) => v,
         None => {
-            // let dimensions = find_images(directory_path)?
-            //     .into_iter()
-            //     .map(|image| image_dimensions(image).map_err(|e| anyhow!(e)))
-            //     .collect::<anyhow::Result<Vec<(u32, u32)>>>()?;
             // find_images will already throw an error if the directory does not contain any images, so unwrap is safe here.
             dimensions.iter().map(|pair| pair.0).min().unwrap()
         }
@@ -129,23 +137,24 @@ pub fn load_images(
     let height = dimensions.iter().map(|pair| pair.1).max().unwrap();
 
     // load images
-    let images: Vec<RgbImage> = paths
-        .par_iter()
-        .map(|&image_path| {
-            let image = ImageReader::open(image_path)?
-                .decode()
-                .map_err(|e| ImageLoaderError::from(e))?;
+    let images = paths.par_iter().map(|&image_path| {
+        let image = ImageReader::open(image_path)?
+            .decode()
+            .map_err(|e| ImageLoaderError::from(e))?;
 
-            if image.width() == width {
-                // noop if widths match
-                Ok(image.into())
-            } else {
-                // resize image otherwise
-                // let height = width as f32 * image.height() as f32 / image.width() as f32;
-                Ok(image.resize(width, height, Lanczos3).into())
-            }
-        })
-        .collect::<Result<Vec<RgbImage>, ImageLoaderError>>()?;
+        if image.width() == width {
+            // noop if widths match
+            Ok(image.into())
+        } else {
+            // resize image otherwise
+            Ok(image.resize(width, height, Lanczos3).into())
+        }
+    });
+    let images: Vec<RgbImage> = if ignore_unloadable {
+        images.filter_map(|res| res.ok()).collect::<Vec<_>>()
+    } else {
+        images.collect::<Result<Vec<RgbImage>, ImageLoaderError>>()?
+    };
 
     // combine all images into one big strip
     let mut combined_image = RgbImage::new(width, images.iter().map(|image| image.height()).sum());

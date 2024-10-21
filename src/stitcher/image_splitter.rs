@@ -1,14 +1,18 @@
 //! This module consists of functions related to the splitting of the combined image.
 
 use std::{
-    fs::{create_dir_all, File},
-    io::BufWriter,
-    path::PathBuf,
+    fs::File,
+    io::{self, BufWriter},
+    path::Path,
 };
 
-use image::{codecs::jpeg::JpegEncoder, GenericImageView, Pixel, Rgb, RgbImage};
+use image::{
+    codecs::{jpeg::JpegEncoder, png::PngEncoder, webp::WebPEncoder},
+    GenericImageView, ImageError, Pixel, Rgb, RgbImage,
+};
 use itertools::Itertools;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use thiserror::Error;
 
 /// Finds all the rows of pixels which should be cut.
 ///
@@ -173,21 +177,75 @@ fn get_num_digits(num: usize) -> usize {
     num.checked_ilog10().unwrap_or(0) as usize + 1
 }
 
+#[derive(Error, Debug)]
+pub enum ImageSplitterError {
+    #[error("Could not find the provided directory")]
+    DirectoryNotFound,
+    #[error("Insufficient permissions within the provided directory")]
+    PermissionDenied,
+
+    // upstream errors
+    #[error("{0:?}")]
+    ImageError(ImageError),
+    #[error("{0}")]
+    IoError(io::Error),
+}
+
+pub enum ImageOutputFormat {
+    Png,
+    Webp,
+    Jpeg(u8),
+    Jpg(u8),
+}
+
+impl From<ImageError> for ImageSplitterError {
+    fn from(value: ImageError) -> Self {
+        Self::ImageError(value)
+    }
+}
+
+impl From<io::Error> for ImageSplitterError {
+    fn from(value: io::Error) -> Self {
+        use io::ErrorKind as Kind;
+        match value.kind() {
+            Kind::PermissionDenied => ImageSplitterError::PermissionDenied,
+            _ => ImageSplitterError::IoError(value),
+        }
+    }
+}
+
+/// Uses the provided splitpoints, image, and output image filetype to split the image into smaller images
+/// and exports those images into the provided output directory.
+///
+/// Input parameters:
+///  - image: A reference to the combined image.
+///  - splitpoints: A vector containing the pixel height at which the combined image should be split.
+///  - output_directory: The output directory where the split images are to be exported.
+///  - output_filetype: The output image filetype along with the quality setting (if applicable).
+///
+/// Throws an error if:
+///  - Any of the split images fails to be exported.
+///  - The output directory provided is not a valid directory.
+///  - This program does not have adequate permissions to create the images inside the provided directory.
+///  - The split images are too large in dimension for the output filetype.
 pub fn split_image(
     image: &RgbImage,
     splitpoints: &Vec<usize>,
-    output_directory: PathBuf,
-    quality: u8,
-) {
-    create_dir_all(output_directory.clone()).unwrap();
+    output_directory: impl AsRef<Path>,
+    output_filetype: ImageOutputFormat,
+) -> Result<(), Vec<ImageSplitterError>> {
+    let output_directory = output_directory.as_ref().to_path_buf();
+    if !output_directory.is_dir() {
+        return Err(vec![ImageSplitterError::DirectoryNotFound]);
+    }
     let max_digits = get_num_digits(splitpoints.len());
-    splitpoints
+    let output: Vec<Result<(), ImageSplitterError>> = splitpoints
         .windows(2)
         .map(|slice| (slice[0], slice[1] - slice[0]))
         .collect::<Vec<(_, _)>>()
         .par_iter()
         .enumerate()
-        .for_each(|(index, (start, length))| {
+        .map(|(index, (start, length))| {
             let page = image
                 .view(
                     0,
@@ -198,12 +256,45 @@ pub fn split_image(
                 .to_image();
             let mut output_filepath = output_directory.clone();
             output_filepath.push(format!(
-                "{}{}.jpeg",
+                "{}{}.{}",
                 "0".repeat(max_digits - get_num_digits(index + 1)),
-                index + 1
+                index + 1,
+                match output_filetype {
+                    ImageOutputFormat::Png => "png",
+                    ImageOutputFormat::Jpeg(_) => "jpeg",
+                    ImageOutputFormat::Webp => "webp",
+                    ImageOutputFormat::Jpg(_) => "jpg",
+                }
             ));
-            let file = File::create(output_filepath).unwrap();
-            let encoder = JpegEncoder::new_with_quality(BufWriter::new(file), quality);
-            page.write_with_encoder(encoder).unwrap()
-        });
+            let file = match File::create(output_filepath) {
+                Ok(file) => file,
+                Err(e) => {
+                    return Err(ImageSplitterError::from(e));
+                }
+            };
+            // May be the cause of unknown errors.
+            let res = match output_filetype {
+                ImageOutputFormat::Png => {
+                    page.write_with_encoder(PngEncoder::new(BufWriter::new(file)))
+                }
+                ImageOutputFormat::Webp => {
+                    page.write_with_encoder(WebPEncoder::new_lossless(BufWriter::new(file)))
+                }
+                ImageOutputFormat::Jpeg(quality) | ImageOutputFormat::Jpg(quality) => page
+                    .write_with_encoder(JpegEncoder::new_with_quality(
+                        BufWriter::new(file),
+                        quality,
+                    )),
+            };
+            match res {
+                Ok(_) => Ok(()),
+                Err(e) => Err(ImageSplitterError::from(e)),
+            }
+        })
+        .collect();
+    let errors: Vec<_> = output.into_iter().filter_map(|out| out.err()).collect();
+    if !errors.is_empty() {
+        return Err(errors);
+    }
+    Ok(())
 }

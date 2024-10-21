@@ -1,2 +1,2 @@
 pub mod image_loader;
-pub mod splitter;
+pub mod image_splitter;
