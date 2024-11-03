@@ -1,0 +1,5 @@
+//! # QuickStitch CLI
+//!
+//! ## Installation
+//!
+//! ## Usage

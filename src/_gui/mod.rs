@@ -1,0 +1,5 @@
+//! # QuickStitch GUI
+//!
+//! ## Installation
+//!
+//! ## Usage
