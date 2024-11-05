@@ -1,5 +1,7 @@
-use std::path::PathBuf;
-use clap::{Parser, Args};
+use anyhow::Result;
+use clap::{Args, Parser};
+use quickstitch::{ImageOutputFormat, Loaded, Stitcher};
+use std::path::{Path, PathBuf};
 
 /// Quickly stitch raws.
 ///
@@ -12,7 +14,7 @@ struct Cli {
     input: Input,
     /// The output directory to place the stitched images in.
     #[clap(long, short)]
-    output: PathBuf,
+    output: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Args)]
@@ -22,11 +24,34 @@ struct Input {
     images: Option<Vec<PathBuf>>,
     /// A directory of images to stitch.
     #[clap(long, short, alias = "dir")]
-    dir: Option<Vec<PathBuf>>,
+    dir: Option<PathBuf>,
 }
 
-fn main() {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    println!("{:?} {:?}", cli.input.images, cli.input.dir);
+    let stitcher = Stitcher::new();
+    let loaded: Stitcher<Loaded> = match (cli.input.images, cli.input.dir) {
+        (Some(images), None) => {
+            let paths: Vec<&Path> = images.iter().map(PathBuf::as_path).collect();
+            stitcher.load(&paths, None, true)?
+        }
+        (None, Some(dir)) => stitcher.load_dir(&dir, None, true)?,
+        _ => unimplemented!("arg group rules ensure only one of the two is provided"),
+    };
+    let stitched = loaded.stitch(1000, 5, 220);
+
+    // TODO: handle errors here someday
+    match cli.output {
+        Some(output) => {
+            std::fs::create_dir_all(&output)?;
+            let _ = stitched.export(&output, ImageOutputFormat::Jpg(100));
+        }
+        None => {
+            std::fs::create_dir_all("./stitched")?;
+            let _ = stitched.export("./stitched/", ImageOutputFormat::Jpg(100));
+        }
+    }
+
+    Ok(())
 }
