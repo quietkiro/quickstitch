@@ -31,7 +31,11 @@ use stitcher::{
     image_splitter::{find_splitpoints, find_splitpoints_debug, split_image, ImageSplitterError},
 };
 
-pub trait StitcherState {}
+mod seal {
+    pub trait Seal {}
+}
+
+pub trait StitcherState: seal::Seal {}
 
 // No images loaded
 pub struct Empty;
@@ -47,6 +51,9 @@ pub struct Stitched {
     splitpoints: Vec<usize>,
 }
 
+impl seal::Seal for Empty {}
+impl seal::Seal for Loaded {}
+impl seal::Seal for Stitched {}
 impl StitcherState for Empty {}
 impl StitcherState for Loaded {}
 impl StitcherState for Stitched {}
