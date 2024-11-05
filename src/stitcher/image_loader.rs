@@ -53,12 +53,20 @@ impl From<io::Error> for ImageLoaderError {
     }
 }
 
+pub enum Sort {
+    Logical,
+    Natural,
+}
+
 /// Finds all `.jpg`, `.jpeg`, `.png` and `.webp` images within a directory.
 ///
 /// Throws an error if:
 ///  - The directory is invalid or does not contain any images.
 ///  - The directory does not contain any jpg, jpeg, png, or webp images.
-pub fn find_images(directory_path: impl AsRef<Path>) -> Result<Vec<PathBuf>, ImageLoaderError> {
+pub fn find_images(
+    directory_path: impl AsRef<Path>,
+    sort: Sort,
+) -> Result<Vec<PathBuf>, ImageLoaderError> {
     // create pathbuf, check if path is a directory
     let path = directory_path.as_ref();
     if !path.is_dir() {
@@ -83,8 +91,11 @@ pub fn find_images(directory_path: impl AsRef<Path>) -> Result<Vec<PathBuf>, Ima
         return Err(ImageLoaderError::NoImagesInDirectory);
     }
 
-    // sort images by natural order
-    images.sort_by(|a, b| natord::compare(&a.display().to_string(), &b.display().to_string()));
+    match sort {
+        Sort::Logical => images.sort(),
+        Sort::Natural => images
+            .sort_by(|a, b| natord::compare(&a.display().to_string(), &b.display().to_string())),
+    }
 
     // return images
     Ok(images)
