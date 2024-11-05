@@ -5,6 +5,7 @@ edition = "2021"
 
 [features]
 gui = ["dep:iced"]
+cli = ["dep:clap"]
 
 [dependencies]
 image = { version = "0.25.2", features = ["rayon", "jpeg", "png", "webp"] }
@@ -16,12 +17,19 @@ itertools = "0.13.0"
 # gui deps
 iced = { git = "https://github.com/iced-rs/iced", rev = "043f0302142e46bf1d7ba2015f83261813280fec", optional = true }
 
+# cli deps
+clap = { version = "4.5.20", features = ["derive"], optional = true }
+
 [dev-dependencies]
 criterion = "0.5.1"
 
-# [[bin]]
-# name = "quickstitch-gui"
-# required-features = ["gui"]
+[[bin]]
+name = "quickstitch"
+required-features = ["gui"]
+
+[[bin]]
+name = "qstitch"
+required-features = ["cli"]
 
 [[bin]]
 name = "test"
