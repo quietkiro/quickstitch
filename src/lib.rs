@@ -21,13 +21,14 @@ pub mod _gui;
 
 mod stitcher;
 
+pub use stitcher::image_loader::Sort;
 pub use stitcher::image_splitter::ImageOutputFormat;
 
 use std::path::Path;
 
 use image::RgbImage;
 use stitcher::{
-    image_loader::{find_images, load_images, ImageLoaderError, Sort},
+    image_loader::{find_images, load_images, ImageLoaderError},
     image_splitter::{find_splitpoints, find_splitpoints_debug, split_image, ImageSplitterError},
 };
 
@@ -68,8 +69,9 @@ impl Stitcher<Empty> {
         directory: impl AsRef<Path>,
         width: Option<u32>,
         ignore_unloadable: bool,
+        sort: Sort,
     ) -> Result<Stitcher<Loaded>, ImageLoaderError> {
-        let images = find_images(directory, Sort::Natural)?;
+        let images = find_images(directory, sort)?;
         Ok(Stitcher {
             data: Loaded {
                 strip: load_images(&images, width, ignore_unloadable)?,
