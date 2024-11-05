@@ -1,5 +1,7 @@
 use quickstitch::{Empty, ImageOutputFormat, Stitcher};
 
+struct New {}
+
 fn main() {
     let chapter: Stitcher<Empty> = Stitcher::new();
     let loaded = chapter.load_dir("../sample", None, true).unwrap();
