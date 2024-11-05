@@ -14,8 +14,8 @@
 
 // Documentation-only
 
-pub mod _gui;
 pub mod _cli;
+pub mod _gui;
 
 // API
 
@@ -147,6 +147,3 @@ impl Stitcher<Stitched> {
         )
     }
 }
-
-
-
