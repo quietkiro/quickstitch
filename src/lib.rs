@@ -10,7 +10,7 @@ use std::path::Path;
 
 use image::RgbImage;
 use stitcher::{
-    image_loader::{find_images, load_images, ImageLoaderError},
+    image_loader::{find_images, load_images, ImageLoaderError, Sort},
     image_splitter::{find_splitpoints, find_splitpoints_debug, split_image, ImageSplitterError},
 };
 
@@ -39,16 +39,28 @@ pub struct Stitcher<S: StitcherState> {
 }
 
 impl Stitcher<Empty> {
-    pub fn load(
+    pub fn load_dir(
         self,
-        directory_path: impl AsRef<Path>,
+        directory: impl AsRef<Path>,
         width: Option<u32>,
         ignore_unloadable: bool,
     ) -> Result<Stitcher<Loaded>, ImageLoaderError> {
-        let images = find_images(directory_path)?;
+        let images = find_images(directory, Sort::Natural)?;
         Ok(Stitcher {
             data: Loaded {
                 strip: load_images(&images, width, ignore_unloadable)?,
+            },
+        })
+    }
+    pub fn load(
+        self,
+        images: &[impl AsRef<Path>],
+        width: Option<u32>,
+        ignore_unloadable: bool,
+    ) -> Result<Stitcher<Loaded>, ImageLoaderError> {
+        Ok(Stitcher {
+            data: Loaded {
+                strip: load_images(images, width, ignore_unloadable)?,
             },
         })
     }
