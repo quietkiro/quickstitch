@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Parser};
+use quickstitch as qs;
 use quickstitch::{ImageOutputFormat, Loaded, Stitcher};
 use std::path::{Path, PathBuf};
 
@@ -15,6 +16,15 @@ struct Cli {
     /// The output directory to place the stitched images in.
     #[clap(long, short)]
     output: Option<PathBuf>,
+    /// The sorting method used to sort the images before stitching (only works with `--dir`).
+    ///
+    /// Given the images ["9.jpeg", "10.jpeg", "8.jpeg", "11.jpeg"]:
+    ///   - Logical: ["10.jpeg", "11.jpeg", 8.jpeg", "9.jpeg"]
+    ///   - Natural: ["8.jpeg", "9.jpeg", "10.jpeg", "11.jpeg"]
+    #[clap(long, short, default_value_t = qs::Sort::Natural, verbatim_doc_comment)]
+    #[arg(value_enum)]
+    sort: qs::Sort,
+    // TODO: add more arguments for target height, scan interval, etc. to further customize output
 }
 
 #[derive(Debug, Clone, Args)]
@@ -36,10 +46,10 @@ fn main() -> Result<()> {
             let paths: Vec<&Path> = images.iter().map(PathBuf::as_path).collect();
             stitcher.load(&paths, None, true)?
         }
-        (None, Some(dir)) => stitcher.load_dir(&dir, None, true)?,
+        (None, Some(dir)) => stitcher.load_dir(&dir, None, true, cli.sort.into())?,
         _ => unimplemented!("arg group rules ensure only one of the two is provided"),
     };
-    let stitched = loaded.stitch(1000, 5, 220);
+    let stitched = loaded.stitch(5000, 5, 220);
 
     // TODO: handle errors here someday
     match cli.output {
