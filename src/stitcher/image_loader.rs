@@ -57,10 +57,20 @@ impl From<io::Error> for ImageLoaderError {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Sort {
     #[cfg_attr(feature = "cli", clap(alias = "l"))]
-    #[cfg_attr(feature = "cli", clap(help = "Sorts files lexicographically, treating numbers as strings of digits and not as atomic numbers."))]
+    #[cfg_attr(
+        feature = "cli",
+        clap(
+            help = "Sorts files lexicographically, treating numbers as strings of digits and not as atomic numbers."
+        )
+    )]
     Logical,
     #[cfg_attr(feature = "cli", clap(alias = "n"))]
-    #[cfg_attr(feature = "cli", clap(help = "Treats numbers in the file name atomically, sorting them by numerical value."))]
+    #[cfg_attr(
+        feature = "cli",
+        clap(
+            help = "Treats numbers in the file name atomically, sorting them by numerical value."
+        )
+    )]
     Natural,
 }
 
