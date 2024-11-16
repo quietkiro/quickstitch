@@ -37,26 +37,38 @@ struct Cli {
 
     /// The target height for stitched images.
     ///
-    /// Note that images may be shorter or longer than this value, so it should not be relied upon.
+    /// Stitched images will aim to be as tall as this parameter,
+    /// but they may be shorter if visual elements are in the way.
     #[clap(long, short, default_value_t = 5000)]
     height: usize,
 
-    // TODO: doc undocumented flags (i don't know how these work anyway)
+    /// The interval at which lines of pixels are scanned. For example,
+    /// a value of 5 means every 5th horizontal line of pixels will be
+    /// analyzed.
     #[clap(long, short, default_value_t = 5)]
     scan_interval: usize,
 
+    /// The threshold value between 0 and 255 for determining when a line of 
+    /// pixels should not be used as a splitpoint. 0 would allow the line
+    /// to be used as a splitpoint regardless of the line's pixels' values,
+    /// while 255 would only allow the line to be used as a splitpoint if
+    /// all the pixels in the line have the same value.
     #[clap(long, short, default_value_t = 220)]
+    #[arg(value_parser(value_parser!(u8).range(0..=255)))]
     sensitivity: u8,
 
+    /// The file extension/type used for exporting the stitched images.
     #[clap(long, short, default_value_t = ImageFormat::Jpg)]
     #[arg(value_enum)]
     format: ImageFormat,
 
     /// The image quality to aim for when compressing.
     ///
-    /// A value from 1 to 100 may be provided to specify the amount of compression to be used. A
-    /// lower value represents more compression. This flag only takes effect when `--format` is
-    /// passed a value of `jpg` (the default value) or `jpeg`. Otherwise, it will be ignored.
+    /// A value from 1 to 100 may be provided to specify the amount 
+    /// of compression to be used.
+    /// A lower value represents more compression. This flag only takes
+    /// effect when `--format` is passed a value of `jpg` (the default value)
+    /// or `jpeg`. Otherwise, it will be ignored.
     #[clap(long, short, default_value_t = 100)]
     #[arg(value_parser(value_parser!(u8).range(1..=100)))]
     quality: u8,
