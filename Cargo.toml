@@ -25,11 +25,11 @@ anyhow = { version = "1.0", optional = true }
 criterion = "0.5.1"
 
 [[bin]]
-name = "quickstitch"
+name = "quickstitch_gui"
 required-features = ["gui"]
 
 [[bin]]
-name = "qstitch"
+name = "quickstitch_cli"
 required-features = ["cli"]
 
 [[bin]]

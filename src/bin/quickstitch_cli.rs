@@ -48,7 +48,7 @@ struct Cli {
     #[clap(long, short, default_value_t = 5)]
     scan_interval: usize,
 
-    /// The threshold value between 0 and 255 for determining when a line of 
+    /// The threshold value between 0 and 255 for determining when a line of
     /// pixels should not be used as a splitpoint. 0 would allow the line
     /// to be used as a splitpoint regardless of the line's pixels' values,
     /// while 255 would only allow the line to be used as a splitpoint if
@@ -64,7 +64,7 @@ struct Cli {
 
     /// The image quality to aim for when compressing.
     ///
-    /// A value from 1 to 100 may be provided to specify the amount 
+    /// A value from 1 to 100 may be provided to specify the amount
     /// of compression to be used.
     /// A lower value represents more compression. This flag only takes
     /// effect when `--format` is passed a value of `jpg` (the default value)
