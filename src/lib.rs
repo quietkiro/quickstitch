@@ -148,4 +148,7 @@ impl Stitcher<Stitched> {
             output_filetype,
         )
     }
+    pub fn get_splitpoits(&self) -> &Vec<usize> {
+        &self.data.splitpoints
+    }
 }
