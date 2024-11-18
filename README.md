@@ -2,9 +2,7 @@
 
 Another program for stitching together manhwa/manhua/manga/webtoon raws.
 
-Has a cross-platform GUI built with the [Iced](https://github.com/iced-rs/iced) GUI library. Also usable as a Rust crate.
-
-Check out the [roadmap](./docs/roadmap.md) and the [user guide](./docs/user_guide.md)!
+GUI and CLI applications for this can be found [here](https://github.com/quietkiro/quickstitch_bin)
 
 ## Why make another program?
 
