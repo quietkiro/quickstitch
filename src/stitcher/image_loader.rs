@@ -53,24 +53,9 @@ impl From<io::Error> for ImageLoaderError {
     }
 }
 
-#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Sort {
-    #[cfg_attr(feature = "cli", clap(alias = "l"))]
-    #[cfg_attr(
-        feature = "cli",
-        clap(
-            help = "Sorts files lexicographically, treating numbers as strings of digits and not as atomic numbers."
-        )
-    )]
     Logical,
-    #[cfg_attr(feature = "cli", clap(alias = "n"))]
-    #[cfg_attr(
-        feature = "cli",
-        clap(
-            help = "Treats numbers in the file name atomically, sorting them by numerical value."
-        )
-    )]
     Natural,
 }
 
@@ -125,8 +110,8 @@ pub fn find_images(
 /// Parameters:
 ///  - paths: A slice containing paths to each individual input image.
 ///  - width: The width that the final stitched images will have.
-///  - ignore_unloadable: Sometimes, there is an issue where the same page exists twice,
-///                       except one of them is completely empty. For cases like this,
+///  - ignore_unloadable: Sometimes, there is an issue where an image has a duplicate
+///                       and the duplicate has a filesize of 0. For cases like this,
 ///                       this setting exists to allow you to only load images that are
 ///                       able to be loaded.
 ///
