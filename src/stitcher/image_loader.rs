@@ -146,7 +146,7 @@ pub fn load_images(
     };
 
     // the height to resize images to
-    let height = dimensions.iter().map(|pair| pair.1).max().unwrap();
+    // let height = dimensions.iter().map(|pair| pair.1).max().unwrap();
 
     // load images
     let images = paths.par_iter().map(|&image_path| {
@@ -159,7 +159,7 @@ pub fn load_images(
             Ok(image.into())
         } else {
             // resize image otherwise
-            Ok(image.resize(width, height, Lanczos3).into())
+            Ok(image.resize(width, u32::MAX, Lanczos3).into())
         }
     });
     let images: Vec<RgbImage> = if ignore_unloadable {

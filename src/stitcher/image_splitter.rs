@@ -25,11 +25,12 @@ use thiserror::Error;
 ///     - 255 would be full sensitivity, i.e. all pixels in the row must be exactly the same color for it to be set as a splitpoint.
 pub fn find_splitpoints(
     image: &RgbImage,
-    target_height: usize,
+    max_height: usize,
+    // min_height: usize,
     scan_interval: usize,
     sensitivity: u8,
 ) -> Vec<usize> {
-    let target_height = target_height + 1;
+    let target_height = max_height + 1;
     let limit = u8::MAX - sensitivity;
     let mut splitpoints = vec![0];
     let mut cursor = target_height;
@@ -39,6 +40,7 @@ pub fn find_splitpoints(
             .map(|row| {
                 row.into_iter()
                     .tuple_windows::<(_, _)>()
+                    // Gets the maximum horizontal pixel difference of a row
                     .fold(0, |a, (pixel_a, pixel_b)| {
                         a.max(pixel_a.to_luma().0[0].abs_diff(pixel_b.to_luma().0[0]))
                     })
