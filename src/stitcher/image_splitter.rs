@@ -7,18 +7,39 @@ use std::{
 };
 
 use image::{
-    codecs::{jpeg::JpegEncoder, png::PngEncoder, webp::WebPEncoder},
     GenericImageView, ImageError, Pixel, Rgb, RgbImage,
+    codecs::{jpeg::JpegEncoder, png::PngEncoder, webp::WebPEncoder},
 };
 use itertools::Itertools;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use thiserror::Error;
 
+enum Splitpoint {
+    Cut(usize),
+    Skipped(usize),
+}
+
+impl Splitpoint {
+    fn is_cut(&self) -> bool {
+        match self {
+            Self::Cut(_) => true,
+            Self::Skipped(_) => false,
+        }
+    }
+    fn get(&self) -> usize {
+        match *self {
+            Self::Cut(row) => row,
+            Self::Skipped(row) => row,
+        }
+    }
+}
+
 /// Finds all the rows of pixels which should be cut.
 ///
 /// Input parameters:
 ///  - `image` - A reference to the combined image.
-///  - `target_height` - How many pixels tall each page should be at most.
+///  - `max_height` - How many pixels tall each page should be at most.
+///  - `min_height` - How many pixels tall each page should be at least.
 ///  - `scan_interval` - The interval at which rows of pixels will be scanned.
 ///  - `sensitivity` - A value between 0 and 255, determining the threshold at which a row can be marked as a splitpoint.
 ///     - 0 would be no sensitivity, i.e. it doesn't matter what the pixels in the row are, it will be set as a splitpoint.
@@ -26,7 +47,7 @@ use thiserror::Error;
 pub fn find_splitpoints(
     image: &RgbImage,
     max_height: usize,
-    // min_height: usize,
+    min_height: usize,
     scan_interval: usize,
     sensitivity: u8,
 ) -> Vec<usize> {
@@ -34,6 +55,7 @@ pub fn find_splitpoints(
     let limit = u8::MAX - sensitivity;
     let mut splitpoints = vec![0];
     let mut cursor = target_height;
+    // Loop until we have processed the whole strip
     loop {
         let row_max_pixel_diffs = image
             .rows()
@@ -48,7 +70,7 @@ pub fn find_splitpoints(
             .enumerate()
             .take(cursor)
             .rev()
-            .take(target_height)
+            .take(target_height - min_height)
             .step_by(scan_interval)
             .tuple_windows::<(_, _, _)>();
         let mut min_splitpoint: Option<(usize, u8)> = None;
@@ -75,9 +97,11 @@ pub fn find_splitpoints(
                 None => min_splitpoint = Some(a),
             }
         }
-        if !clean_splitpoint_found && min_splitpoint.is_some() {
-            splitpoints.push(min_splitpoint.unwrap().0);
-            cursor = min_splitpoint.unwrap().0 + target_height;
+        if !clean_splitpoint_found {
+            if let Some(min) = min_splitpoint {
+                splitpoints.push(min.0);
+                cursor = min_splitpoint.unwrap().0 + target_height;
+            }
         }
         if cursor > image.height() as usize {
             break;
