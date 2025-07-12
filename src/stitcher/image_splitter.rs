@@ -7,13 +7,14 @@ use std::{
 };
 
 use image::{
-    GenericImage, GenericImageView, ImageError, Pixel, Rgb, RgbImage,
+    GenericImageView, ImageError, Pixel, Rgb, RgbImage,
     codecs::{jpeg::JpegEncoder, png::PngEncoder, webp::WebPEncoder},
 };
 use itertools::Itertools;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use thiserror::Error;
 
+#[derive(Debug)]
 pub enum Splitpoint {
     Cut(usize),
     Skipped(usize),
@@ -277,6 +278,7 @@ pub fn split_image(
     output_filetype: ImageOutputFormat,
     debug: bool,
 ) -> Result<(), Vec<ImageSplitterError>> {
+    dbg!(splitpoints);
     let output_directory = output_directory.as_ref().to_path_buf();
     if !output_directory.is_dir() {
         return Err(vec![ImageSplitterError::DirectoryNotFound]);
