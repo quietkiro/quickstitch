@@ -1,8 +1,8 @@
 //! This module is for all methods involved in getting selected images loaded into memory.
 
 use image::{
-    error::ImageError, image_dimensions, imageops::FilterType::Lanczos3, GenericImage, ImageReader,
-    RgbImage,
+    GenericImage, ImageReader, RgbImage, error::ImageError, image_dimensions,
+    imageops::FilterType::Lanczos3,
 };
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{
@@ -53,8 +53,14 @@ impl From<io::Error> for ImageLoaderError {
     }
 }
 
+/// Sorting method for image filenames. Specifically used when loading images from a directory.
+///
+/// Given the images ["9.jpeg", "10.jpeg", "8.jpeg", "11.jpeg"]:
+///   - Logical: ["10.jpeg", "11.jpeg", 8.jpeg", "9.jpeg"]
+///   - Natural: ["8.jpeg", "9.jpeg", "10.jpeg", "11.jpeg"]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Sort {
+    /// Images will be sorted
     Logical,
     Natural,
 }
@@ -108,17 +114,16 @@ pub fn find_images(
 /// Otherwise, the given width will be used.
 ///
 /// Parameters:
-///  - paths: A slice containing paths to each individual input image.
-///  - width: The width that the final stitched images will have.
-///  - ignore_unloadable: Sometimes, there is an issue where an image has a duplicate
-///                       and the duplicate has a filesize of 0. For cases like this,
-///                       this setting exists to allow you to only load images that are
-///                       able to be loaded.
+/// - paths: A slice containing paths to each individual input image.
+/// - width: The width that the final stitched images will have.
+/// - ignore_unloadable: Sometimes, there is an issue where an image has a duplicate
+///                       with a filesize of 0. For cases like this, this setting exists
+///                       to allow you to only load images that are able to be loaded.
 ///
 /// Throws an error if:
-///  - The directory is invalid or does not contain any images.
-///  - The directory does not contain any jpg, jpeg, png, or webp images.
-///  - An image cannot be opened.
+/// - The directory is invalid or does not contain any images.
+/// - The directory does not contain any jpg, jpeg, png, or webp images.
+/// - An image cannot be opened.
 pub fn load_images(
     paths: &[impl AsRef<Path>],
     width: Option<u32>,
@@ -144,9 +149,6 @@ pub fn load_images(
             dimensions.iter().map(|pair| pair.0).min().unwrap()
         }
     };
-
-    // the height to resize images to
-    // let height = dimensions.iter().map(|pair| pair.1).max().unwrap();
 
     // load images
     let images = paths.par_iter().map(|&image_path| {
