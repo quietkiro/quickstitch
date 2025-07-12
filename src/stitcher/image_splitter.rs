@@ -7,7 +7,7 @@ use std::{
 };
 
 use image::{
-    GenericImageView, ImageError, Pixel, Rgb, RgbImage,
+    GenericImage, GenericImageView, ImageError, Pixel, Rgb, RgbImage,
     codecs::{jpeg::JpegEncoder, png::PngEncoder, webp::WebPEncoder},
 };
 use itertools::Itertools;
@@ -304,18 +304,20 @@ pub fn split_image(
                 .to_image();
             if debug {
                 // Get all the skipped splitpoints on this page
-                let mut skipped: Vec<_> = splitpoints
+                let skipped: Vec<_> = splitpoints
                     .iter()
                     .skip(index + 1)
                     .take_while(|splitpoint| !splitpoint.is_cut())
                     .map(|splitpoint| splitpoint.get() - start)
                     .collect();
-                skipped.push(*length);
                 skipped.iter().for_each(|skipped_row| {
                     for i in 0..image.width() {
                         page.put_pixel(i, *skipped_row as u32, Rgb([53, 81, 92]));
                     }
-                })
+                });
+                for i in 0..image.width() {
+                    page.put_pixel(i, *length as u32, Rgb([255, 0, 0]));
+                }
             }
             let mut output_filepath = output_directory.clone();
             output_filepath.push(format!(
