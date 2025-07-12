@@ -308,8 +308,8 @@ pub fn split_image(
                 // Get all the skipped splitpoints on this page
                 let skipped: Vec<_> = splitpoints
                     .iter()
-                    .skip(index + 1)
-                    .take_while(|splitpoint| !splitpoint.is_cut())
+                    .skip_while(|splitpoint| splitpoint.get() < *start)
+                    .take_while(|splitpoint| splitpoint.get() < start + length)
                     .map(|splitpoint| splitpoint.get() - start)
                     .collect();
                 skipped.iter().for_each(|skipped_row| {
