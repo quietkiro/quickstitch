@@ -312,7 +312,6 @@ pub fn split_image(
                     .take_while(|splitpoint| !splitpoint.is_cut())
                     .map(|splitpoint| splitpoint.get() - start)
                     .collect();
-                dbg!(&skipped);
                 skipped.iter().for_each(|skipped_row| {
                     for i in 0..image.width() {
                         page.put_pixel(i, *skipped_row as u32, Rgb([53, 81, 92]));
