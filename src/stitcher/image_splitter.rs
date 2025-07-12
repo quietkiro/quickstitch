@@ -281,12 +281,12 @@ pub fn split_image(
     if !output_directory.is_dir() {
         return Err(vec![ImageSplitterError::DirectoryNotFound]);
     }
-    let max_digits = get_num_digits(splitpoints.len());
     let cut_splitpoints: Vec<_> = splitpoints
         .iter()
         .filter(|splitpoint| splitpoint.is_cut())
         .map(|splitpoint| splitpoint.get())
         .collect();
+    let max_digits = get_num_digits(cut_splitpoints.len());
     let output: Vec<Result<(), ImageSplitterError>> = cut_splitpoints
         .windows(2)
         .map(|slice| (slice[0], slice[1] - slice[0]))
@@ -310,6 +310,7 @@ pub fn split_image(
                     .take_while(|splitpoint| !splitpoint.is_cut())
                     .map(|splitpoint| splitpoint.get() - start)
                     .collect();
+                dbg!(&skipped);
                 skipped.iter().for_each(|skipped_row| {
                     for i in 0..image.width() {
                         page.put_pixel(i, *skipped_row as u32, Rgb([53, 81, 92]));
