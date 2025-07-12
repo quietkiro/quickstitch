@@ -13,8 +13,8 @@ use std::path::Path;
 
 use image::RgbImage;
 use stitcher::{
-    image_loader::{find_images, load_images, ImageLoaderError},
-    image_splitter::{find_splitpoints, find_splitpoints_debug, split_image, ImageSplitterError},
+    image_loader::{ImageLoaderError, find_images, load_images},
+    image_splitter::{ImageSplitterError, Splitpoint, find_splitpoints, split_image},
 };
 
 mod seal {
@@ -34,7 +34,7 @@ pub struct Loaded {
 // Images have been cut up
 pub struct Stitched {
     strip: RgbImage,
-    splitpoints: Vec<usize>,
+    splitpoints: Vec<Splitpoint>,
 }
 
 impl seal::Seal for Empty {}
@@ -84,27 +84,14 @@ impl Stitcher<Loaded> {
     pub fn stitch(
         self,
         target_height: usize,
+        min_height: usize,
         scan_interval: usize,
         sensitivity: u8,
     ) -> Stitcher<Stitched> {
-        let splitpoints =
-            find_splitpoints(&self.data.strip, target_height, scan_interval, sensitivity);
-        Stitcher {
-            data: Stitched {
-                strip: self.data.strip,
-                splitpoints,
-            },
-        }
-    }
-    pub fn stitch_debug(
-        mut self,
-        target_height: usize,
-        scan_interval: usize,
-        sensitivity: u8,
-    ) -> Stitcher<Stitched> {
-        let splitpoints = find_splitpoints_debug(
-            &mut self.data.strip,
+        let splitpoints = find_splitpoints(
+            &self.data.strip,
             target_height,
+            min_height,
             scan_interval,
             sensitivity,
         );
@@ -115,6 +102,25 @@ impl Stitcher<Loaded> {
             },
         }
     }
+    // pub fn stitch_debug(
+    //     mut self,
+    //     target_height: usize,
+    //     scan_interval: usize,
+    //     sensitivity: u8,
+    // ) -> Stitcher<Stitched> {
+    //     let splitpoints = find_splitpoints_debug(
+    //         &mut self.data.strip,
+    //         target_height,
+    //         scan_interval,
+    //         sensitivity,
+    //     );
+    //     Stitcher {
+    //         data: Stitched {
+    //             strip: self.data.strip,
+    //             splitpoints,
+    //         },
+    //     }
+    // }
 }
 
 impl Stitcher<Stitched> {
@@ -125,15 +131,17 @@ impl Stitcher<Stitched> {
         &self,
         output_directory: impl AsRef<Path>,
         output_filetype: ImageOutputFormat,
+        debug: bool,
     ) -> Result<(), Vec<ImageSplitterError>> {
         split_image(
             &self.data.strip,
             &self.data.splitpoints,
             output_directory,
             output_filetype,
+            debug,
         )
     }
-    pub fn get_splitpoits(&self) -> &Vec<usize> {
+    pub fn get_splitpoits(&self) -> &Vec<Splitpoint> {
         &self.data.splitpoints
     }
 }

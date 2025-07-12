@@ -14,7 +14,7 @@ use itertools::Itertools;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use thiserror::Error;
 
-enum Splitpoint {
+pub enum Splitpoint {
     Cut(usize),
     Skipped(usize),
 }
@@ -30,6 +30,12 @@ impl Splitpoint {
         match *self {
             Self::Cut(row) => row,
             Self::Skipped(row) => row,
+        }
+    }
+    fn switch(&mut self) {
+        match *self {
+            Self::Cut(row) => *self = Self::Skipped(row),
+            Self::Skipped(row) => *self = Self::Cut(row),
         }
     }
 }
@@ -50,10 +56,10 @@ pub fn find_splitpoints(
     min_height: usize,
     scan_interval: usize,
     sensitivity: u8,
-) -> Vec<usize> {
+) -> Vec<Splitpoint> {
     let target_height = max_height + 1;
     let limit = u8::MAX - sensitivity;
-    let mut splitpoints = vec![0];
+    let mut splitpoints = vec![Splitpoint::Cut(0)];
     let mut cursor = target_height;
     // Loop until we have processed the whole strip
     loop {
@@ -81,10 +87,12 @@ pub fn find_splitpoints(
             // Debug mode
             // If all three rows' pixel diffs are below the threshold, mark it as a cut point.
             if a.1 <= limit && b.1 <= limit && c.1 <= limit {
-                splitpoints.push(a.0);
+                splitpoints.push(Splitpoint::Cut(a.0));
                 cursor = a.0 + target_height;
                 clean_splitpoint_found = true;
                 break;
+            } else {
+                splitpoints.push(Splitpoint::Skipped(a.0));
             }
             // Otherwise, keep track of the minimum maximum of the three rows' max pixel diff.
             let curr_max = a.1.max(b.1.max(c.1));
@@ -99,7 +107,15 @@ pub fn find_splitpoints(
         }
         if !clean_splitpoint_found {
             if let Some(min) = min_splitpoint {
-                splitpoints.push(min.0);
+                // The minimum splitpoint is going to be one that we have already marked as "skipped".
+                // To find and replace it efficiently, we can take advantage of the fact that the minimum
+                // is most likely to be near the end of the vector, thus searching the vector in reverse
+                // is most efficient.
+                splitpoints
+                    .iter_mut()
+                    .rev()
+                    .find(|splitpoint| splitpoint.get() == min.0)
+                    .map(|splitpoint| splitpoint.switch());
                 cursor = min_splitpoint.unwrap().0 + target_height;
             }
         }
@@ -107,7 +123,7 @@ pub fn find_splitpoints(
             break;
         }
     }
-    splitpoints.push(image.height() as usize);
+    splitpoints.push(Splitpoint::Cut(image.height() as usize));
     splitpoints
 }
 
@@ -124,77 +140,77 @@ pub fn find_splitpoints(
 ///  - `sensitivity` - A value between 0 and 255, determining the threshold at which a row can be marked as a splitpoint.
 ///     - 0 would be no sensitivity, i.e. it doesn't matter what the pixels in the row are, it will be set as a splitpoint.
 ///     - 255 would be full sensitivity, i.e. all pixels in the row must be exactly the same color for it to be set as a splitpoint.
-pub fn find_splitpoints_debug(
-    image: &mut RgbImage,
-    target_height: usize,
-    scan_interval: usize,
-    sensitivity: u8,
-) -> Vec<usize> {
-    let target_height = target_height + 1;
-    let limit = u8::MAX - sensitivity;
-    let mut splitpoints = vec![0];
-    let mut cursor = target_height;
-    let ref_image = image.clone();
-    loop {
-        let row_max_pixel_diffs = ref_image
-            .rows()
-            .map(|row| {
-                row.into_iter()
-                    .tuple_windows::<(_, _)>()
-                    .fold(0, |a, (pixel_a, pixel_b)| {
-                        a.max(pixel_a.to_luma().0[0].abs_diff(pixel_b.to_luma().0[0]))
-                    })
-            })
-            .enumerate()
-            .take(cursor)
-            .rev()
-            .take(target_height)
-            .step_by(scan_interval)
-            .tuple_windows::<(_, _, _)>();
-        let mut min_splitpoint: Option<(usize, u8)> = None;
-        // This is to figure out how the loop exits. If a clean splitpoint (splitpoint which is under threshold) is found,
-        // we won't need to push the min_splitpoint into the splitpoints vector.
-        let mut clean_splitpoint_found = false;
-        for (a, b, c) in row_max_pixel_diffs {
-            // If all three rows' pixel diffs are below the threshold, mark it as a cut point.
-            if a.1 <= limit && b.1 <= limit && c.1 <= limit {
-                let curr_max = a.1.max(b.1.max(c.1));
-                let to_mark = (image.width() as f32 * (curr_max as f32 / u8::MAX as f32)) as u32;
-                for pixel in 0..to_mark {
-                    image.put_pixel(pixel, a.0 as u32, Rgb([53, 81, 92]));
-                }
-                splitpoints.push(a.0);
-                cursor = a.0 + target_height;
-                clean_splitpoint_found = true;
-                break;
-            }
-            // Otherwise, keep track of the minimum maximum of the three rows' max pixel diff.
-            let curr_max = a.1.max(b.1.max(c.1));
-            let to_mark = (image.width() as f32 * (curr_max as f32 / u8::MAX as f32)) as u32;
-            for pixel in 0..to_mark {
-                image.put_pixel(pixel, a.0 as u32, Rgb([255, 0, 0]));
-            }
+// pub fn find_splitpoints_debug(
+//     image: &mut RgbImage,
+//     target_height: usize,
+//     scan_interval: usize,
+//     sensitivity: u8,
+// ) -> Vec<usize> {
+//     let target_height = target_height + 1;
+//     let limit = u8::MAX - sensitivity;
+//     let mut splitpoints = vec![0];
+//     let mut cursor = target_height;
+//     let ref_image = image.clone();
+//     loop {
+//         let row_max_pixel_diffs = ref_image
+//             .rows()
+//             .map(|row| {
+//                 row.into_iter()
+//                     .tuple_windows::<(_, _)>()
+//                     .fold(0, |a, (pixel_a, pixel_b)| {
+//                         a.max(pixel_a.to_luma().0[0].abs_diff(pixel_b.to_luma().0[0]))
+//                     })
+//             })
+//             .enumerate()
+//             .take(cursor)
+//             .rev()
+//             .take(target_height)
+//             .step_by(scan_interval)
+//             .tuple_windows::<(_, _, _)>();
+//         let mut min_splitpoint: Option<(usize, u8)> = None;
+//         // This is to figure out how the loop exits. If a clean splitpoint (splitpoint which is under threshold) is found,
+//         // we won't need to push the min_splitpoint into the splitpoints vector.
+//         let mut clean_splitpoint_found = false;
+//         for (a, b, c) in row_max_pixel_diffs {
+//             // If all three rows' pixel diffs are below the threshold, mark it as a cut point.
+//             if a.1 <= limit && b.1 <= limit && c.1 <= limit {
+//                 let curr_max = a.1.max(b.1.max(c.1));
+//                 let to_mark = (image.width() as f32 * (curr_max as f32 / u8::MAX as f32)) as u32;
+//                 for pixel in 0..to_mark {
+//                     image.put_pixel(pixel, a.0 as u32, Rgb([53, 81, 92]));
+//                 }
+//                 splitpoints.push(a.0);
+//                 cursor = a.0 + target_height;
+//                 clean_splitpoint_found = true;
+//                 break;
+//             }
+//             // Otherwise, keep track of the minimum maximum of the three rows' max pixel diff.
+//             let curr_max = a.1.max(b.1.max(c.1));
+//             let to_mark = (image.width() as f32 * (curr_max as f32 / u8::MAX as f32)) as u32;
+//             for pixel in 0..to_mark {
+//                 image.put_pixel(pixel, a.0 as u32, Rgb([255, 0, 0]));
+//             }
 
-            match min_splitpoint {
-                Some(prev) => {
-                    if prev.1 > curr_max {
-                        min_splitpoint = Some(a)
-                    }
-                }
-                None => min_splitpoint = Some(a),
-            }
-        }
-        if !clean_splitpoint_found && min_splitpoint.is_some() {
-            splitpoints.push(min_splitpoint.unwrap().0);
-            cursor = min_splitpoint.unwrap().0 + target_height;
-        }
-        if cursor > image.height() as usize {
-            break;
-        }
-    }
-    splitpoints.push(ref_image.height() as usize);
-    splitpoints
-}
+//             match min_splitpoint {
+//                 Some(prev) => {
+//                     if prev.1 > curr_max {
+//                         min_splitpoint = Some(a)
+//                     }
+//                 }
+//                 None => min_splitpoint = Some(a),
+//             }
+//         }
+//         if !clean_splitpoint_found && min_splitpoint.is_some() {
+//             splitpoints.push(min_splitpoint.unwrap().0);
+//             cursor = min_splitpoint.unwrap().0 + target_height;
+//         }
+//         if cursor > image.height() as usize {
+//             break;
+//         }
+//     }
+//     splitpoints.push(ref_image.height() as usize);
+//     splitpoints
+// }
 
 /// A helper function to calculate the number of digits a `usize` number has
 fn get_num_digits(num: usize) -> usize {
@@ -256,23 +272,29 @@ impl From<io::Error> for ImageSplitterError {
 ///  - The split images are too large in dimension for the output filetype.
 pub fn split_image(
     image: &RgbImage,
-    splitpoints: &Vec<usize>,
+    splitpoints: &Vec<Splitpoint>,
     output_directory: impl AsRef<Path>,
     output_filetype: ImageOutputFormat,
+    debug: bool,
 ) -> Result<(), Vec<ImageSplitterError>> {
     let output_directory = output_directory.as_ref().to_path_buf();
     if !output_directory.is_dir() {
         return Err(vec![ImageSplitterError::DirectoryNotFound]);
     }
     let max_digits = get_num_digits(splitpoints.len());
-    let output: Vec<Result<(), ImageSplitterError>> = splitpoints
+    let cut_splitpoints: Vec<_> = splitpoints
+        .iter()
+        .filter(|splitpoint| splitpoint.is_cut())
+        .map(|splitpoint| splitpoint.get())
+        .collect();
+    let output: Vec<Result<(), ImageSplitterError>> = cut_splitpoints
         .windows(2)
         .map(|slice| (slice[0], slice[1] - slice[0]))
         .collect::<Vec<(_, _)>>()
         .par_iter()
         .enumerate()
         .map(|(index, (start, length))| {
-            let page = image
+            let mut page = image
                 .view(
                     0,
                     start.to_owned() as u32,
@@ -280,6 +302,21 @@ pub fn split_image(
                     length.to_owned() as u32,
                 )
                 .to_image();
+            if debug {
+                // Get all the skipped splitpoints on this page
+                let mut skipped: Vec<_> = splitpoints
+                    .iter()
+                    .skip(index + 1)
+                    .take_while(|splitpoint| !splitpoint.is_cut())
+                    .map(|splitpoint| splitpoint.get() - start)
+                    .collect();
+                skipped.push(*length);
+                skipped.iter().for_each(|skipped_row| {
+                    for i in 0..image.width() {
+                        page.put_pixel(i, *skipped_row as u32, Rgb([53, 81, 92]));
+                    }
+                })
+            }
             let mut output_filepath = output_directory.clone();
             output_filepath.push(format!(
                 "{}{}.{}",
