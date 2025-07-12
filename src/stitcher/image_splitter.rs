@@ -278,7 +278,6 @@ pub fn split_image(
     output_filetype: ImageOutputFormat,
     debug: bool,
 ) -> Result<(), Vec<ImageSplitterError>> {
-    dbg!(splitpoints);
     let output_directory = output_directory.as_ref().to_path_buf();
     if !output_directory.is_dir() {
         return Err(vec![ImageSplitterError::DirectoryNotFound]);
@@ -306,20 +305,22 @@ pub fn split_image(
                 .to_image();
             if debug {
                 // Get all the skipped splitpoints on this page
-                let skipped: Vec<_> = splitpoints
+                splitpoints
                     .iter()
                     .skip_while(|splitpoint| splitpoint.get() < *start)
                     .take_while(|splitpoint| splitpoint.get() < start + length)
-                    .map(|splitpoint| splitpoint.get() - start)
-                    .collect();
-                skipped.iter().for_each(|skipped_row| {
-                    for i in 0..image.width() {
-                        page.put_pixel(i, *skipped_row as u32, Rgb([53, 81, 92]));
-                    }
-                });
-                for i in 0..image.width() {
-                    page.put_pixel(i, *length as u32, Rgb([255, 0, 0]));
-                }
+                    .for_each(|row| {
+                        for i in 0..image.width() {
+                            match row {
+                                Splitpoint::Cut(y) => {
+                                    page.put_pixel(i, (*y - start) as u32, Rgb([255, 0, 0]))
+                                }
+                                Splitpoint::Skipped(y) => {
+                                    page.put_pixel(i, (*y - start) as u32, Rgb([53, 81, 92]))
+                                }
+                            }
+                        }
+                    });
             }
             let mut output_filepath = output_directory.clone();
             output_filepath.push(format!(
