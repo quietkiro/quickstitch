@@ -1,6 +1,7 @@
 //! This module consists of functions related to the splitting of the combined image.
 
 use std::{
+    cmp,
     fs::File,
     io::{self, BufWriter},
     path::Path,
@@ -83,45 +84,39 @@ pub fn find_splitpoints(
             .take(target_height - min_height)
             .step_by(scan_interval)
             .tuple_windows::<(_, _, _)>();
-        let mut min_splitpoint: Option<(usize, u8)> = None;
+
+        // This is for handling the case where none of the splitpoints are under our threshold,
+        // in which case we want to keep track of the row index as well as the max pixel diff
+        // across three scan lines, and update whenever we encounter a smaller max pixel diff.
+        let mut min_splitpoint: (usize, u8) = (cursor - 1, 255);
+
         // This is to figure out how the loop exits. If a clean splitpoint (splitpoint which is under threshold) is found,
         // we won't need to push the min_splitpoint into the splitpoints vector.
         let mut clean_splitpoint_found = false;
         for (a, b, c) in row_max_pixel_diffs {
-            // Debug mode
             // If all three rows' pixel diffs are below the threshold, mark it as a cut point.
             if a.1 <= limit && b.1 <= limit && c.1 <= limit {
                 splitpoints.push(Splitpoint::Cut(a.0));
                 cursor = a.0 + target_height;
                 clean_splitpoint_found = true;
                 break;
-            } else {
-                splitpoints.push(Splitpoint::Skipped(a.0));
             }
+            splitpoints.push(Splitpoint::Skipped(a.0));
             // Otherwise, keep track of the minimum maximum of the three rows' max pixel diff.
             let curr_max = a.1.max(b.1.max(c.1));
-            match min_splitpoint {
-                Some(prev) => {
-                    if prev.1 > curr_max {
-                        min_splitpoint = Some(a)
-                    }
-                }
-                None => min_splitpoint = Some(a),
-            }
+            min_splitpoint = cmp::min_by(min_splitpoint, (a.0, curr_max), |a, b| a.1.cmp(&b.1));
         }
         if !clean_splitpoint_found {
-            if let Some(min) = min_splitpoint {
-                // The minimum splitpoint is going to be one that we have already marked as "skipped".
-                // To find and replace it efficiently, we can take advantage of the fact that the minimum
-                // is most likely to be near the end of the vector, thus searching the vector in reverse
-                // is most efficient.
-                splitpoints
-                    .iter_mut()
-                    .rev()
-                    .find(|splitpoint| splitpoint.get() == min.0)
-                    .map(|splitpoint| splitpoint.switch());
-                cursor = min_splitpoint.unwrap().0 + target_height;
-            }
+            // The minimum splitpoint is going to be one that we have already marked as "skipped".
+            // To find and replace it efficiently, we can take advantage of the fact that the minimum
+            // is most likely to be near the end of the vector, thus searching the vector in reverse
+            // is most efficient.
+            splitpoints
+                .iter_mut()
+                .rev()
+                .find(|splitpoint| splitpoint.get() == min_splitpoint.0)
+                .map(|splitpoint| splitpoint.switch());
+            cursor = min_splitpoint.0 + target_height;
         }
         if cursor > image.height() as usize {
             break;
