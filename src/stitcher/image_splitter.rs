@@ -15,7 +15,7 @@ use itertools::Itertools;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Splitpoint {
     Cut(usize),
     Skipped(usize),
