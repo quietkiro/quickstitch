@@ -6,6 +6,7 @@
 
 mod stitcher;
 
+pub use stitcher::image_loader::ImageLoaderError;
 pub use stitcher::image_loader::Sort;
 pub use stitcher::image_splitter::{ImageOutputFormat, Splitpoint};
 
@@ -13,7 +14,7 @@ use std::path::Path;
 
 use image::RgbImage;
 use stitcher::{
-    image_loader::{ImageLoaderError, find_images, load_images},
+    image_loader::{find_images, load_images},
     image_splitter::{ImageSplitterError, find_splitpoints, split_image},
 };
 
